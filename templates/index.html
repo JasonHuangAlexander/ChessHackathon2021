@@ -1,0 +1,209 @@
+<script type="text/javascript" src="static/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="static/js/chess.js"></script>
+<div id="div1"></div>
+<script>
+	const chess = new Chess()
+	var piecedictionary = {
+
+	}
+
+
+
+	var imagesofpieces = {
+		"r": "static/imgs/chesspieces/wikipedia/bR.png",
+		"n": "static/imgs/chesspieces/wikipedia/bN.png",
+		"b": "static/imgs/chesspieces/wikipedia/bB.png",
+		"q": "static/imgs/chesspieces/wikipedia/bQ.png",
+		"k": "static/imgs/chesspieces/wikipedia/bK.png",
+		"p": "static/imgs/chesspieces/wikipedia/bP.png",
+		"R": "static/imgs/chesspieces/wikipedia/wR.png",
+		"N": "static/imgs/chesspieces/wikipedia/wN.png",
+		"B": "static/imgs/chesspieces/wikipedia/wB.png",
+		"Q": "static/imgs/chesspieces/wikipedia/wQ.png",
+		"K": "static/imgs/chesspieces/wikipedia/wK.png",
+		"P": "static/imgs/chesspieces/wikipedia/wP.png"
+	}
+
+	var totalRows = 8;
+	var cellsInRow = 8;
+	var min = 1;
+	var max = 10;
+	var changething = true
+
+
+	function call_rest_service(url, callback, errorCallback, params_json) {
+		if (callback) {
+			// https://javascript.info/xmlhttprequest
+			let xhttp = new XMLHttpRequest()
+			// xhttp.open('GET', requestUrl, true)
+			xhttp.open('POST', url, true)
+			// xhttp.setRequestHeader('Content-Type', 'application/json')
+			xhttp.onreadystatechange = function () {
+				if (this.readyState == 4) {
+					if (this.status == 200) {
+						let response = JSON.parse(xhttp.responseText)
+						callback(response)
+					} else if (errorCallback) {
+						// errorCallback(JSON.parse(xhttp.statusText))
+						errorCallback(xhttp.statusText)
+					}
+				}
+			}
+			xhttp.send(params_json)
+		}
+	}
+	function get_selected_algo() {
+		return ("stockfish")
+	}
+	function make_move(move) {
+		console.log("make_move")
+		params = { board: chess.fen(), algo: get_selected_algo() }
+		params_json = JSON.stringify(params)
+		console.log("params_json: " + params_json)
+		call_rest_service(
+			url = "/make_move",
+			function (board) {
+				console.log("board: " + JSON.stringify(board))
+				//update_board_position(board_position)
+				console.log("board: " + board)
+				console.log("board.fen: " + board.fen)
+
+				chess.load(board.fen)
+				//make_move_local(move)
+				drawTable()
+			},
+			function (error) {
+				console.log("error: " + error)
+			},
+			params_json
+		)
+	}
+
+	function clear_board() {
+		console.log("clear_board")
+		$("#table1 tr").remove();
+	}
+
+	function get_board_dictionary() {
+		console.log("get_board_dictionary")
+		let board_position = {}
+		for (let row = 8; row >= 1; row--) {
+			for (let file = 'a'.charCodeAt(0); file <= 'h'.charCodeAt(0); file++) {
+				let square = String.fromCharCode(file) + row
+				let piece = chess.get(square)
+				if (piece) {
+					let colored_piece = (piece.color === 'w') ? piece.type.toUpperCase() : piece.type
+					board_position[square] = colored_piece
+				}
+			}
+		}
+		return board_position
+	}
+
+	function drawTable() {
+		clear_board()
+		var piecedictionary = get_board_dictionary();
+		// get the reference for the body
+		var div1 = document.getElementById('div1');
+
+		// creates a <table> element
+		var tbl = document.createElement("table");
+		tbl.id = "table1"
+		// creating rows
+		for (var r = totalRows; r >= 1; r--) {
+			var row = document.createElement("tr");
+			changething = !changething
+
+			// create cells in row
+			for (var f = 1; f <= cellsInRow; f++) {
+				//	var num = (num + 3)
+				var cell = document.createElement("td");
+				cell.style.width = '80px'
+				cell.style.height = '80px'
+				if (changething) {
+					cell.style.backgroundColor = "8B4513"
+				}
+				else {
+					cell.style.backgroundColor = "DEB887"
+				}
+				changething = !changething
+
+				var oImg = document.createElement("img");
+
+				//oImg.setAttribute('alt', 'na');
+				oImg.setAttribute('height', '80px');
+				oImg.setAttribute('width', '80px');
+				//  cell.appendChild(cellText);
+				cell.appendChild(oImg);
+				row.appendChild(cell);
+
+				//if f == 1, make the
+				var tileid// = f.toString().concat(r.toString())
+				if (f == 1) {
+					tileid = "a"
+				}
+				if (f == 2) {
+					tileid = "b"
+				}
+				if (f == 3) {
+					tileid = "c"
+				}
+				if (f == 4) {
+					tileid = "d"
+				}
+				if (f == 5) {
+					tileid = "e"
+				}
+				if (f == 6) {
+					tileid = "f"
+				}
+				if (f == 7) {
+					tileid = "g"
+				}
+				if (f == 8) {
+					tileid = "h"
+				}
+				tileid = tileid.concat(r.toString())
+				cell.id = tileid
+				cell.ondrop = function (event) {
+					let from = event.dataTransfer.getData("text");
+					let to = event.target.parentNode.id
+					let fromto = from + to
+					//alert(fromto)
+					var move = chess.move(fromto, { sloppy: true })
+					console.log("move: " + move)
+					if (move) {
+						make_move(move)
+					}
+					//chess.move('e2e4', { sloppy: true })
+					console.log(chess.ascii())
+					drawTable()
+				};
+				cell.ondragover = function (event) {
+					event.preventDefault()
+					event.dataTransfer.setData("text", event.target.id);
+				};
+
+				//for each tile, if the tile id = a dict key, then add the corresponsindg image
+				var piece = piecedictionary[tileid]
+				if (piece) { //value of first dictionary
+					var pieceimage = imagesofpieces[piece]
+					oImg.setAttribute('src', pieceimage);
+					oImg.id = tileid
+					oImg.draggable = true
+					oImg.ondragstart = function (event) {
+						event.dataTransfer.setData("text", event.target.id);
+					};
+				}
+			}
+
+			tbl.appendChild(row); // add the row to the end of the table body
+		}
+
+		div1.appendChild(tbl); // appends <table> into <div1>
+	}
+	window.onload = drawTable;
+</script>
+</body>
+
+</html>
